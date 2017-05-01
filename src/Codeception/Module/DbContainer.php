@@ -241,7 +241,7 @@ class DbContainer extends Module
      *
      * @return array
      */
-    public function getDatabases()
+    private function getDatabases()
     {
         return $this->_databases;
     }
