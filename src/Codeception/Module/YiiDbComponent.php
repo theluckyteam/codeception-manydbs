@@ -31,17 +31,21 @@ class YiiDbComponent extends Module
     protected $requiredFields = ['component'];
 
     /**
-     * @inheritdoc
-     */
-    private $_isPopulated = false;
-
-    /**
-     * @inheritdoc
+     * @var boolean Флаг говорящий о том инициализирован ли компонет
      */
     private $_isBootstrapped = false;
 
     /**
-     * @inheritdoc
+     * @var boolean Флаг говорящий о том были ли презагружены данные
+     */
+    private $_isPopulated = false;
+
+    /**
+     * Codeception hook, выполняется каждый раз перед TestCase
+     *
+     * @param TestInterface $test Экземпляр TestCase
+     *
+     * @return void
      */
     public function _before(TestInterface $test)
     {
@@ -60,7 +64,9 @@ class YiiDbComponent extends Module
     }
 
     /**
-     * @inheritdoc
+     * Инициализировать компонент, презагрузить данные
+     *
+     * @return void
      */
     private function bootstrap()
     {
@@ -135,6 +141,8 @@ class YiiDbComponent extends Module
      *
      * @param string $fileName Имя файла с дампом базы данных
      * @param string $delimiter Разделитель SQL выражений
+     *
+     * @return void
      */
     private function loadSqlDumpfile($fileName, $delimiter = ';')
     {
@@ -170,7 +178,11 @@ class YiiDbComponent extends Module
     }
 
     /**
-     * @inheritdoc
+     * Codeception hook, выполняется каждый раз после TestCase
+     *
+     * @param TestInterface $test Экземпляр TestCase
+     *
+     * @return void
      */
     public function _after(TestInterface $test)
     {
@@ -181,7 +193,14 @@ class YiiDbComponent extends Module
     }
 
     /**
-     * @inheritdoc
+     * В базе данных есть следующие значения
+     *
+     * @param string $table имя таблицы
+     * @param array $columns ассоциативный массив, определяющий запись БД
+     *
+     * @return void
+     * @throws ModuleConfigException
+     * @throws \yii\db\Exception
      */
     public function haveInDatabase($table, $columns)
     {
@@ -192,7 +211,14 @@ class YiiDbComponent extends Module
     }
 
     /**
-     * @inheritdoc
+     * Количество записей в базе данных попадающих под условие
+     *
+     * @param string $table имя таблица
+     * @param array $condition условие поиска записей
+     *
+     * @return integer
+     * @throws ModuleConfigException
+     * @throws \yii\db\Exception
      */
     public function countInDatabase($table, $condition)
     {
@@ -204,7 +230,13 @@ class YiiDbComponent extends Module
     }
 
     /**
-     * @inheritdoc
+     * Проверяет наличие записей в базе данных попадающих под условие
+     *
+     * @param string $table имя таблица
+     * @param array $condition условие поиска записей
+     *
+     * @throws ModuleConfigException
+     * @throws \yii\db\Exception
      */
     public function seeInDatabase($table, $condition)
     {
@@ -221,7 +253,13 @@ class YiiDbComponent extends Module
     }
 
     /**
-     * @inheritdoc
+     * Проверяет отсутствие записей в базе данных попадающих под условие
+     *
+     * @param string $table имя таблица
+     * @param array $condition условие поиска записей
+     *
+     * @throws ModuleConfigException
+     * @throws \yii\db\Exception
      */
     public function dontSeeInDatabase($table, $condition)
     {
@@ -298,6 +336,8 @@ class YiiDbComponent extends Module
     }
 
     /**
+     * Получить флаг говорящий о необходимости после каждого TestCase подгрущать данные в базу данных
+     *
      * @return boolean
      */
     private function getPopulate()
