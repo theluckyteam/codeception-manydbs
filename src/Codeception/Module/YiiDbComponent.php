@@ -1,6 +1,7 @@
 <?php
 namespace Codeception\Module;
 
+use Codeception\Configuration;
 use Codeception\Exception\ModuleConfigException;
 use Codeception\Module;
 use Codeception\TestInterface;
@@ -23,6 +24,7 @@ class YiiDbComponent extends Module
         'populate' => true,
         'reconnect' => false,
         'component' => null,
+        'testCaseDumpMethod' => null,
     ];
 
     /**
@@ -50,7 +52,7 @@ class YiiDbComponent extends Module
     public function _before(TestInterface $test)
     {
         if (!$this->getIsBootstrapped()) {
-            $this->bootstrap();
+            $this->bootstrap($test);
         } else {
             if ($this->getReconnect()) {
                 $this->connect();
@@ -58,7 +60,7 @@ class YiiDbComponent extends Module
             if ($this->getCleanup()
                     && !$this->getIsPopulated()) {
                 $this->clean();
-                $this->loadDump();
+                $this->loadDump($test);
             }
         }
     }
@@ -66,16 +68,18 @@ class YiiDbComponent extends Module
     /**
      * Инициализировать компонент, презагрузить данные
      *
+     * @param TestInterface $test Экземпляр TestCase
+     *
      * @return void
      */
-    private function bootstrap()
+    private function bootstrap(TestInterface $test = null)
     {
         $this->connect();
         if ($this->getPopulate()) {
             if ($this->getCleanup()) {
                 $this->clean();
             }
-            $this->loadDump();
+            $this->loadDump($test);
             $this->setIsPopulated();
         }
         $this->setIsBootstrapped();
@@ -126,16 +130,40 @@ class YiiDbComponent extends Module
     /**
      * Загрузить дамп базы данных
      *
+     * @param TestInterface $test Экземпляр TestCase
+     *
      * @return void
      */
-    private function loadDump()
+    private function loadDump(TestInterface $test = null)
     {
-        $files = (array) $this->getDump();
+        if ($test && $this->testCaseDumpMethodExists($test)) {
+            $files = (array) call_user_func([$test, $this->getTestCaseDumpMethod()]);
+        } else {
+            $files = (array) $this->getDump();
+        }
         foreach ($files as $file) {
-            $this->loadSqlDumpfile($file);
+            if ($fileName = trim($file)) {
+                $fileName = $this->prepareDumpFilename($fileName);
+                $this->loadSqlDumpfile($fileName);
+            }
         }
     }
-    
+
+    /**
+     * Подготовить полное имя dump-файла
+     *
+     * @param string $fileName имя файла
+     *
+     * @return string полное имя файла
+     */
+    private function prepareDumpFilename($fileName)
+    {
+        if ($fileName[0] !== '/') {
+            $fileName = Configuration::projectDir() . $fileName;
+        }
+        return $fileName;
+    }
+
     /**
      * Загрузить файл дампа базы данных
      *
@@ -313,6 +341,31 @@ class YiiDbComponent extends Module
     private function setIsPopulated($isPopulated = true)
     {
         $this->_isPopulated = $isPopulated;
+    }
+
+    /**
+     * Получить метод возвращающий список файлов для загрузки данных в базу данных
+     *
+     * @param TestInterface $test Экземпляр TestCase
+     *
+     * @return array
+     */
+    private function testCaseDumpMethodExists(TestInterface $test)
+    {
+        if (!(array_key_exists('testCaseDumpMethod', $this->config) && $this->config['testCaseDumpMethod'])) {
+            return false;
+        }
+        return method_exists($test, $this->config['testCaseDumpMethod']);
+    }
+
+    /**
+     * Получить метод возвращающий список файлов для загрузки данных в базу данных
+     *
+     * @return array
+     */
+    private function getTestCaseDumpMethod()
+    {
+        return $this->config['testCaseDumpMethod'];
     }
 
     /**
