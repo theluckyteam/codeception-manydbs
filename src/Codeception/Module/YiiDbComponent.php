@@ -1,6 +1,7 @@
 <?php
 namespace Codeception\Module;
 
+use Codeception\Configuration;
 use Codeception\Exception\ModuleConfigException;
 use Codeception\Module;
 use Codeception\TestInterface;
@@ -132,10 +133,28 @@ class YiiDbComponent extends Module
     {
         $files = (array) $this->getDump();
         foreach ($files as $file) {
-            $this->loadSqlDumpfile($file);
+            if ($fileName = trim($file)) {
+                $fileName = $this->prepareDumpFilename($fileName);
+                $this->loadSqlDumpfile($fileName);
+            }
         }
     }
-    
+
+    /**
+     * Подготовить полное имя dump-файла
+     *
+     * @param string $fileName имя файла
+     *
+     * @return string полное имя файла
+     */
+    private function prepareDumpFilename($fileName)
+    {
+        if ($fileName[0] !== '/') {
+            $fileName = Configuration::projectDir() . $fileName;
+        }
+        return $fileName;
+    }
+
     /**
      * Загрузить файл дампа базы данных
      *
