@@ -25,6 +25,7 @@ class YiiDbComponent extends Module
         'reconnect' => false,
         'component' => null,
         'testCaseDumpMethod' => null,
+        'safetyCatch' => 'test',
     ];
 
     /**
@@ -111,7 +112,7 @@ class YiiDbComponent extends Module
     /**
      * Очистить базу данных
      *
-     * @return void
+     * @throws ModuleConfigException
      */
     private function clean()
     {
@@ -119,12 +120,38 @@ class YiiDbComponent extends Module
         $connection = $this->getConnection();
         $schema = $connection->getSchema();
 
+        if (!$this->canClean()) {
+            throw new ModuleConfigException($this, 'Database name has not safety catch.');
+        }
+        
         $tableSchemas = $schema->getTableSchemas();
         foreach ($tableSchemas as $tableSchema) {
             $command = $connection->createCommand()
                 ->dropTable($tableSchema->name);
             $command->execute();
         }
+    }
+
+    /**
+     * Возможность осуществить очистку
+     *
+     * Позаботимся о том, что невнимательный разработчик не стер случайно базу разработчиков, вместо тестовой
+     *
+     * @return boolean
+     */
+    private function canClean()
+    {
+        /** @var Connection $connection */
+        $connection = $this->getConnection();
+
+        $parts = explode(';', $connection->dsn);
+        foreach ($parts as $part) {
+            list($key, $value) = explode('=', $part);
+            if ($key == 'dbname' && mb_stripos($value, $this->getSafetyCatch())!== false) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -366,6 +393,16 @@ class YiiDbComponent extends Module
     private function getTestCaseDumpMethod()
     {
         return $this->config['testCaseDumpMethod'];
+    }
+
+    /**
+     * Получить предохранитель - часть в имени базы данных говорящее о том что база преднозначена для тестирования
+     *
+     * @return string
+     */
+    private function getSafetyCatch()
+    {
+        return $this->config['safetyCatch'];
     }
 
     /**
